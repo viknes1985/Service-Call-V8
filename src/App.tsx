@@ -1452,40 +1452,47 @@ function SponsorForm({ isDarkMode, onSuccess }: { isDarkMode: boolean, onSuccess
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   
-  // 1. Basic check for photos
-  if (photos.length === 0) {
-    alert('Please upload at least one photo');
+  // 1. Check if the user is logged in (using the 'user' state from App.tsx)
+  if (!user || !user.email) {
+    alert("You must be logged in as an administrator to perform this action.");
     return;
   }
-  
+
+  // 2. Validate that photos are attached
+  if (photos.length === 0) {
+    alert('Please upload at least one photo.');
+    return;
+  }
+
   setIsSubmitting(true);
 
   try {
-    // REMOVE the line that says: const photoUrls = await Promise.all(...)
-    
-    // 2. Send the RAW photos (base64) to the backend
+    // 3. Send the request to the backend
     const res = await fetch('/api/sponsors', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        ...formData, 
-        adminEmail: user?.email, // Make sure user is defined in your scope
-        photoUrls: photos         // Use the 'photos' state variable directly
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        adminEmail: user.email, // This uses the 'user' state from your App.tsx
+        photoUrls: photos      // Sends the raw base64 images to the server
       })
     });
 
     if (res.ok) {
+      // 4. Success logic
       setFormData({ name: '', phone: '', email: '' });
       setPhotos([]);
-      onSuccess();
+      fetchSponsors(); // Refresh the list
       alert('Sponsor added successfully!');
     } else {
       const errorData = await res.json();
-      alert(`Error: ${errorData.error}`);
+      alert(`Failed to add: ${errorData.error}`);
     }
   } catch (err) {
-    console.error(err);
-    alert('Failed to add sponsor');
+    console.error('Submit Error:', err);
+    alert('An unexpected error occurred. Please try again.');
   } finally {
     setIsSubmitting(false);
   }
