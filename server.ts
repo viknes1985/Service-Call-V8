@@ -545,44 +545,54 @@ async function startServer() {
     }
   });
 
-  app.post("/api/sponsors", async (req, res) => {
-    const { adminEmail, name, phone, email, photoUrls } = req.body;
-    if (!isAdminEmail(adminEmail)) {
-      return res.status(403).json({ error: "Unauthorized" });
-    }
-
-    const id = Math.random().toString(36).substring(2, 15);
-
-    // server.ts - Inside app.post("/api/sponsors", ...)
-try {
-  // Ensure photoUrls is an array before mapping
-  const urlsToProcess = Array.isArray(photoUrls) ? photoUrls : [];
-
-  const processedUrls = await Promise.all(
-    urlsToProcess.map(async (item: any) => {
-      // Safety check: only call saveToImgBB if the item is a string
-      if (typeof item === 'string') {
-        return await saveToImgBB(item);
-      }
-      return "";
-    })
-  );
-
-  const newSponsor = new Sponsor({
-    _id: id,
-    name,
-    phone,
-    email,
-    photoUrls: processedUrls.filter(u => u !== ""),
-    isEnabled: true
-  });
+app.post("/api/sponsors", async (req, res) => {
+  const { adminEmail, name, phone, email, photoUrls } = req.body;
   
-  await newSponsor.save();
+  if (!isAdminEmail(adminEmail)) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+
+  const id = Math.random().toString(36).substring(2, 15);
+
+  try {
+    // 1. Ensure photoUrls is an array before mapping
+    const urlsToProcess = Array.isArray(photoUrls) ? photoUrls : [];
+
+    const processedUrls = await Promise.all(
+      urlsToProcess.map(async (item: any) => {
+        // Safety check: only call saveToImgBB if the item is a string
+        if (typeof item === 'string' && item.startsWith('data:image')) {
+          return await saveToImgBB(item);
+        }
+        return item; // Keep it if it's already a URL
+      })
+    );
+
+    // 2. Create the Sponsor object
+    const newSponsor = new Sponsor({
+      _id: id,
+      name,
+      phone,
+      email,
+      photoUrls: processedUrls.filter(u => u !== ""),
+      isEnabled: true
+    }); // <--- Added missing closing parenthesis and brace
+  
+    // 3. Save to Database
+    await newSponsor.save();
     
-    catch (err: any) {
-      res.status(400).json({ error: err.message });
-    }
-  });
+    // 4. Send success response
+    res.json({ id, ...newSponsor.toObject() });
+
+  } catch (err: any) {
+    // This now correctly catches errors from the try block
+    console.error("Sponsor Save Error:", err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+
+  
 
   app.patch("/api/sponsors/:id", async (req, res) => {
     const { id } = req.params;
