@@ -1448,34 +1448,50 @@ function SponsorForm({ isDarkMode, onSuccess }: { isDarkMode: boolean, onSuccess
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (photos.length === 0) {
-      alert('Please upload at least one photo');
-      return;
-    }
-    setIsSubmitting(true);
 
-    try {
-      const photoUrls = await Promise.all(photos.map(p => saveToImgBB(p)));
-      const res = await fetch('/api/sponsors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, photoUrls })
-      });
-      if (res.ok) {
-        setFormData({ name: '', phone: '', email: '' });
-        setPhotos([]);
-        onSuccess();
-        alert('Sponsor added successfully!');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Failed to add sponsor');
-    } finally {
-      setIsSubmitting(false);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  // 1. Basic check for photos
+  if (photos.length === 0) {
+    alert('Please upload at least one photo');
+    return;
+  }
+  
+  setIsSubmitting(true);
+
+  try {
+    // REMOVE the line that says: const photoUrls = await Promise.all(...)
+    
+    // 2. Send the RAW photos (base64) to the backend
+    const res = await fetch('/api/sponsors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        ...formData, 
+        adminEmail: user?.email, // Make sure user is defined in your scope
+        photoUrls: photos         // Use the 'photos' state variable directly
+      })
+    });
+
+    if (res.ok) {
+      setFormData({ name: '', phone: '', email: '' });
+      setPhotos([]);
+      onSuccess();
+      alert('Sponsor added successfully!');
+    } else {
+      const errorData = await res.json();
+      alert(`Error: ${errorData.error}`);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    alert('Failed to add sponsor');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+  
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
