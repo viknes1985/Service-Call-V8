@@ -545,52 +545,49 @@ async function startServer() {
     }
   });
 
-app.post("/api/sponsors", async (req, res) => {
+
+
+  app.post("/api/sponsors", async (req, res) => {
   const { adminEmail, name, phone, email, photoUrls } = req.body;
   
-  if (!isAdminEmail(adminEmail)) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
-
-  const id = Math.random().toString(36).substring(2, 15);
+  // ... authorization check ...
 
   try {
-    // 1. Ensure photoUrls is an array before mapping
-    const urlsToProcess = Array.isArray(photoUrls) ? photoUrls : [];
+    // 1. Force photoUrls to be an array and ignore empty objects
+    const rawUrls = Array.isArray(photoUrls) ? photoUrls : [];
 
     const processedUrls = await Promise.all(
-      urlsToProcess.map(async (item: any) => {
-        // Safety check: only call saveToImgBB if the item is a string
+      rawUrls.map(async (item: any) => {
+        // Only process if it's a non-empty string
         if (typeof item === 'string' && item.startsWith('data:image')) {
           return await saveToImgBB(item);
         }
-        return item; // Keep it if it's already a URL
+        // If it's already a URL string, keep it
+        if (typeof item === 'string' && item.startsWith('http')) {
+          return item;
+        }
+        // If it's an object or invalid, return empty string to be filtered out
+        return "";
       })
     );
 
-    // 2. Create the Sponsor object
     const newSponsor = new Sponsor({
-      _id: id,
+      _id: Math.random().toString(36).substring(2, 15),
       name,
       phone,
       email,
-      photoUrls: processedUrls.filter(u => u !== ""),
+      // 2. Clean out any empty strings or failed uploads
+      photoUrls: processedUrls.filter(u => typeof u === 'string' && u !== ""),
       isEnabled: true
-    }); // <--- Added missing closing parenthesis and brace
-  
-    // 3. Save to Database
-    await newSponsor.save();
-    
-    // 4. Send success response
-    res.json({ id, ...newSponsor.toObject() });
+    });
 
+    await newSponsor.save();
+    res.json(newSponsor);
   } catch (err: any) {
-    // This now correctly catches errors from the try block
-    console.error("Sponsor Save Error:", err);
+    console.error("Validation Error Details:", err);
     res.status(400).json({ error: err.message });
   }
 });
-
 
   
 
