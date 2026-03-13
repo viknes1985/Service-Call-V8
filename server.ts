@@ -552,19 +552,34 @@ async function startServer() {
     }
 
     const id = Math.random().toString(36).substring(2, 15);
-    try {
-      const processedUrls = await Promise.all((photoUrls || []).map((url: string) => saveToImgBB(url)));
-      const newSponsor = new Sponsor({
-        _id: id,
-        name,
-        phone,
-        email,
-        photoUrls: processedUrls.filter(u => u !== ""),
-        isEnabled: true
-      });
-      await newSponsor.save();
-      res.json({ id, ...newSponsor.toObject() });
-    } catch (err: any) {
+
+    // server.ts - Inside app.post("/api/sponsors", ...)
+try {
+  // Ensure photoUrls is an array before mapping
+  const urlsToProcess = Array.isArray(photoUrls) ? photoUrls : [];
+
+  const processedUrls = await Promise.all(
+    urlsToProcess.map(async (item: any) => {
+      // Safety check: only call saveToImgBB if the item is a string
+      if (typeof item === 'string') {
+        return await saveToImgBB(item);
+      }
+      return "";
+    })
+  );
+
+  const newSponsor = new Sponsor({
+    _id: id,
+    name,
+    phone,
+    email,
+    photoUrls: processedUrls.filter(u => u !== ""),
+    isEnabled: true
+  });
+  
+  await newSponsor.save();
+    
+    catch (err: any) {
       res.status(400).json({ error: err.message });
     }
   });
