@@ -1457,7 +1457,7 @@ function SponsorForm({ isDarkMode, onSuccess }: { isDarkMode: boolean, onSuccess
     setIsSubmitting(true);
 
     try {
-      const photoUrls = await Promise.all(photos.map(p => saveToImgBB(p)));
+      //const photoUrls = await Promise.all(photos.map(p => saveToImgBB(p)));
       const res = await fetch('/api/sponsors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
