@@ -1448,7 +1448,6 @@ function SponsorForm({ isDarkMode, onSuccess }: { isDarkMode: boolean, onSuccess
     }
   };
 
-
 const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (photos.length === 0) {
@@ -1458,15 +1457,15 @@ const handleSubmit = async (e: React.FormEvent) => {
     setIsSubmitting(true);
 
     try {
-      // FIX: We send 'photos' directly to the backend. 
-      // We map it to the key 'photoUrls' because that is what your server.ts expects.
       const res = await fetch('/api/sponsors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           ...formData, 
-          adminEmail: user?.email, // Ensure this is included if your backend requires it
-          photoUrls: photos         // Use 'photos' here instead of 'photoUrls'
+          // Use 'user?.email' which is already available in your App component's state
+          adminEmail: user?.email, 
+          // Map your 'photos' state to the 'photoUrls' key for the backend
+          photoUrls: photos 
         })
       });
 
@@ -1476,9 +1475,8 @@ const handleSubmit = async (e: React.FormEvent) => {
         onSuccess();
         alert('Sponsor added successfully!');
       } else {
-        // It's good practice to check for !res.ok to see server-side errors
-        const errorData = await res.json();
-        alert(`Failed to add sponsor: ${errorData.error || 'Unknown error'}`);
+        const data = await res.json();
+        alert(data.error || 'Failed to add sponsor');
       }
     } catch (err) {
       console.error(err);
@@ -1487,6 +1485,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       setIsSubmitting(false);
     }
   };
+
   
 
   return (
