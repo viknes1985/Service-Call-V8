@@ -1448,7 +1448,8 @@ function SponsorForm({ isDarkMode, onSuccess }: { isDarkMode: boolean, onSuccess
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (photos.length === 0) {
       alert('Please upload at least one photo');
@@ -1457,17 +1458,27 @@ function SponsorForm({ isDarkMode, onSuccess }: { isDarkMode: boolean, onSuccess
     setIsSubmitting(true);
 
     try {
-      //const photoUrls = await Promise.all(photos.map(p => saveToImgBB(p)));
+      // FIX: We send 'photos' directly to the backend. 
+      // We map it to the key 'photoUrls' because that is what your server.ts expects.
       const res = await fetch('/api/sponsors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, photoUrls })
+        body: JSON.stringify({ 
+          ...formData, 
+          adminEmail: user?.email, // Ensure this is included if your backend requires it
+          photoUrls: photos         // Use 'photos' here instead of 'photoUrls'
+        })
       });
+
       if (res.ok) {
         setFormData({ name: '', phone: '', email: '' });
         setPhotos([]);
         onSuccess();
         alert('Sponsor added successfully!');
+      } else {
+        // It's good practice to check for !res.ok to see server-side errors
+        const errorData = await res.json();
+        alert(`Failed to add sponsor: ${errorData.error || 'Unknown error'}`);
       }
     } catch (err) {
       console.error(err);
@@ -1476,6 +1487,7 @@ function SponsorForm({ isDarkMode, onSuccess }: { isDarkMode: boolean, onSuccess
       setIsSubmitting(false);
     }
   };
+  
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
